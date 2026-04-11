@@ -1,1234 +1,722 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hackathon Clicker 2026 · Nido</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PassionPath — Encuentra tu proyecto</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'pp-blue':  '#4A90D9',
+            'pp-green': '#5CB85C',
+            'pp-light': '#EAF4FB',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
-    /* =============================================
-       COLORS — change these to restyle the whole app
-    ============================================= */
-    :root {
-      --bg:        #0d1117;
-      --surface:   #161b22;
-      --border:    #30363d;
-      --green:     #3fb950;
-      --blue:      #58a6ff;
-      --pink:      #f778ba;
-      --orange:    #ffa657;
-      --yellow:    #e3b341;
-      --text:      #c9d1d9;
-      --muted:     #8b949e;
-      --red:       #ff4444;
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #ffffff; }
+    #map { width: 100%; height: 100%; }
+    .leaflet-container { background: #e8f4f8; }
+
+    /* Sidebar scrollbar */
+    #sidebar::-webkit-scrollbar { width: 6px; }
+    #sidebar::-webkit-scrollbar-track { background: #f1f5f9; }
+    #sidebar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+
+    /* Card hover animation */
+    .project-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .project-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(74,144,217,0.18) !important;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Courier New', Courier, monospace;
-      min-height: 100vh;
-      padding: 1rem;
-    }
-
-    /* =============================================
-       HEADER
-    ============================================= */
-    header {
-      text-align: center;
-      padding: 1.25rem 0 1rem;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 1.25rem;
-    }
-
-    .title {
-      font-size: clamp(1.4rem, 4vw, 2rem);
-      font-weight: bold;
-      color: var(--green);
-      text-shadow: 0 0 24px rgba(63, 185, 80, 0.6);
-      letter-spacing: 0.08em;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 0.8rem;
-      margin-top: 0.3rem;
-    }
-
-    /* =============================================
-       STATS BAR
-    ============================================= */
-    .stats {
-      display: flex;
-      justify-content: center;
-      gap: clamp(1rem, 4vw, 3rem);
-      margin-bottom: 1.25rem;
-      flex-wrap: wrap;
-    }
-
-    .stat { text-align: center; }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: var(--green);
-      transition: color 0.2s;
-    }
-
-    .stat-label {
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    /* =============================================
-       GRID LAYOUT
-    ============================================= */
-    .game-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: auto auto;
-      gap: 1rem;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-
-    @media (max-width: 620px) {
-      .game-grid { grid-template-columns: 1fr; }
-    }
-
-    .full-width { grid-column: 1 / -1; }
-
-    /* =============================================
-       CARDS
-    ============================================= */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem;
-    }
-
-    .card-title {
-      font-size: 0.72rem;
-      font-weight: bold;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 0.9rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    /* =============================================
-       CLICK BUTTON
-    ============================================= */
-    .click-zone {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .code-btn {
-      background: #0d1117;
-      border: 2px solid var(--green);
-      color: var(--green);
-      font-family: 'Courier New', monospace;
-      font-size: 1.15rem;
-      font-weight: bold;
-      padding: 1.4rem 1rem;
-      border-radius: 8px;
+    /* Checkbox custom style */
+    .filter-check {
+      accent-color: #4A90D9;
+      width: 16px;
+      height: 16px;
       cursor: pointer;
-      width: 100%;
-      text-shadow: 0 0 10px rgba(63,185,80,0.7);
-      box-shadow: 0 0 20px rgba(63,185,80,0.1), inset 0 0 20px rgba(63,185,80,0.04);
+    }
+
+    /* Transport badge colors */
+    .badge-walk    { background: #d4edda; color: #155724; }
+    .badge-cycle   { background: #cce5ff; color: #004085; }
+    .badge-drive   { background: #fff3cd; color: #856404; }
+    .badge-highway { background: #f8d7da; color: #721c24; }
+
+    /* Match score bar */
+    .match-bar-fill {
+      transition: width 0.5s ease;
+    }
+
+    /* Header gradient */
+    .header-gradient {
+      background: linear-gradient(135deg, #4A90D9 0%, #5CB85C 100%);
+    }
+
+    /* Category pill active */
+    .cat-pill.active {
+      background: #4A90D9;
+      color: white;
+      border-color: #4A90D9;
+    }
+    .cat-pill {
+      transition: all 0.15s ease;
+      cursor: pointer;
       user-select: none;
-      transition: box-shadow 0.1s, transform 0.08s, border-color 0.1s;
-      letter-spacing: 0.05em;
+    }
+    .cat-pill:hover:not(.active) {
+      background: #EAF4FB;
+      border-color: #4A90D9;
     }
 
-    .code-btn:hover {
-      box-shadow: 0 0 35px rgba(63,185,80,0.35), inset 0 0 30px rgba(63,185,80,0.08);
+    /* Budget button */
+    .budget-btn.active {
+      background: #5CB85C;
+      color: white;
+      border-color: #5CB85C;
     }
-
-    .code-btn:active {
-      transform: scale(0.96);
-      box-shadow: 0 0 50px rgba(63,185,80,0.6), inset 0 0 30px rgba(63,185,80,0.15);
-    }
-
-    .cursor { animation: blink 1s step-end infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-    .click-info {
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    /* =============================================
-       FLOATING +N EFFECT
-    ============================================= */
-    .float-text {
-      position: fixed;
-      font-family: 'Courier New', monospace;
-      font-size: 1rem;
-      font-weight: bold;
-      pointer-events: none;
-      z-index: 999;
-      animation: floatUp 0.9s ease-out forwards;
-    }
-
-    @keyframes floatUp {
-      0%   { transform: translateY(0) scale(1);   opacity: 1; }
-      100% { transform: translateY(-65px) scale(0.8); opacity: 0; }
-    }
-
-    /* =============================================
-       UPGRADES
-    ============================================= */
-    .upgrade-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .upgrade-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.65rem 0.75rem;
+    .budget-btn {
+      transition: all 0.15s ease;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
+      user-select: none;
+    }
+    .budget-btn:hover:not(.active) {
+      background: #f0faf0;
+      border-color: #5CB85C;
     }
 
-    .upgrade-item:hover:not(.locked):not(.owned) {
-      border-color: var(--blue);
-      background: rgba(88,166,255,0.05);
-    }
-
-    .upgrade-item.locked  { opacity: 0.35; cursor: not-allowed; }
-    .upgrade-item.owned   { border-color: var(--green); opacity: 0.6; cursor: default; }
-
-    .upgrade-icon { font-size: 1.4rem; flex-shrink: 0; }
-
-    .upgrade-info { flex: 1; min-width: 0; }
-
-    .upgrade-name {
-      font-size: 0.85rem;
-      font-weight: bold;
-      color: var(--text);
-    }
-
-    .upgrade-desc {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-top: 0.1rem;
-    }
-
-    .upgrade-cost {
-      font-size: 0.8rem;
-      color: var(--yellow);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .upgrade-cost.owned-label { color: var(--green); }
-
-    /* =============================================
-       TERMINAL QUESTS
-    ============================================= */
-    .quest-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .quest-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.75rem;
-      transition: border-color 0.3s;
-    }
-
-    .quest-item.done { border-color: var(--green); opacity: 0.65; }
-
-    .quest-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5rem;
-      gap: 0.5rem;
-    }
-
-    .quest-name {
-      font-size: 0.85rem;
-      font-weight: bold;
-      color: var(--text);
-    }
-
-    .quest-status {
-      font-size: 0.72rem;
-      color: var(--muted);
-      flex-shrink: 0;
-    }
-
-    .quest-body {
-      font-size: 0.77rem;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    .code-snippet {
-      display: inline-block;
-      background: #000;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0.25rem 0.55rem;
-      font-family: 'Courier New', monospace;
-      font-size: 0.82rem;
-      color: var(--green);
-      margin: 0.3rem 0;
-    }
-
-    .quest-btn {
-      display: inline-block;
-      background: var(--green);
-      color: #000;
-      border: none;
-      border-radius: 4px;
-      padding: 0.35rem 0.8rem;
-      font-family: 'Courier New', monospace;
-      font-size: 0.75rem;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 0.55rem;
-      transition: background 0.15s, transform 0.1s;
-      letter-spacing: 0.03em;
-    }
-
-    .quest-btn:hover  { background: #57d968; }
-    .quest-btn:active { transform: scale(0.96); }
-
-    .quest-reward {
-      font-size: 0.7rem;
-      color: var(--yellow);
-      margin-top: 0.4rem;
-    }
-
-    .quest-completed-badge {
-      display: inline-block;
-      background: rgba(63,185,80,0.15);
-      border: 1px solid rgba(63,185,80,0.4);
-      color: var(--green);
-      font-size: 0.7rem;
-      font-weight: bold;
-      letter-spacing: 0.08em;
-      padding: 0.15rem 0.5rem;
-      border-radius: 4px;
-      margin-bottom: 0.55rem;
-    }
-
-    .quest-body-done {
-      opacity: 0.45;
-    }
-
-    .quest-link {
-      display: inline-block;
-      margin-top: 0.3rem;
-      padding: 0.2rem 0.6rem;
-      border: 1px solid var(--blue);
-      border-radius: 4px;
-      color: var(--blue);
-      font-family: 'Courier New', monospace;
-      font-size: 0.8rem;
-      text-decoration: none;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .quest-link:hover { background: var(--blue); color: #000; }
-
-    .quest-link-pulse {
-      animation: linkGlow 1.4s ease-in-out infinite;
-    }
-
-    @keyframes linkGlow {
-      0%, 100% { border-color: var(--blue);  color: var(--blue);  box-shadow: none; }
-      50%       { border-color: var(--green); color: var(--green); box-shadow: 0 0 10px rgba(63,185,80,0.5); }
-    }
-
-    .quest-waiting {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.55rem;
-      font-size: 0.75rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--blue);
-      flex-shrink: 0;
-      animation: pulse 1.4s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1;   transform: scale(1);    }
-      50%       { opacity: 0.3; transform: scale(0.7);  }
-    }
-
-    /* =============================================
-       ACHIEVEMENTS
-    ============================================= */
-    .achievements-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
-      gap: 0.5rem;
-    }
-
-    .achievement {
-      text-align: center;
-      padding: 0.5rem 0.25rem;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      cursor: help;
-      opacity: 0.2;
-      filter: grayscale(1);
-      transition: opacity 0.4s, filter 0.4s, border-color 0.4s, box-shadow 0.4s;
-      position: relative;
-    }
-
-    .achievement.unlocked {
-      opacity: 1;
-      filter: none;
-      border-color: var(--yellow);
-      box-shadow: 0 0 10px rgba(227,179,65,0.25);
-    }
-
-    .achievement-icon { font-size: 1.4rem; }
-
-    .achievement-name {
-      font-size: 0.58rem;
-      color: var(--muted);
-      margin-top: 0.2rem;
-      line-height: 1.2;
-    }
-
-    /* =============================================
-       RESET BUTTON
-    ============================================= */
-    .reset-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      border-radius: 4px;
-      padding: 0.25rem 0.6rem;
-      font-family: 'Courier New', monospace;
-      font-size: 0.7rem;
-      cursor: pointer;
-      margin-top: 1rem;
-      float: right;
-      transition: border-color 0.15s, color 0.15s;
-    }
-
-    .reset-btn:hover { border-color: var(--red); color: var(--red); }
-
-    /* =============================================
-       TOAST NOTIFICATION
-    ============================================= */
-    .toast {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      background: var(--surface);
-      border: 1px solid var(--green);
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      color: var(--text);
-      font-size: 0.82rem;
-      line-height: 1.5;
-      z-index: 1001;
-      max-width: 280px;
-      animation: toastIn 0.25s ease-out, toastOut 0.3s ease-in 2.8s forwards;
-      pointer-events: none;
-    }
-
-    @keyframes toastIn  { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes toastOut { to   { transform: translateX(110%); opacity: 0; } }
-
-    /* =============================================
-       SETUP CHECKLIST
-    ============================================= */
-    .setup-card {
-      border-color: var(--blue);
-      box-shadow: 0 0 18px rgba(88,166,255,0.1);
-    }
-
-    .setup-card.all-done {
-      border-color: var(--green);
-      box-shadow: 0 0 18px rgba(63,185,80,0.1);
-    }
-
-    .setup-card .card-title { border-bottom-color: rgba(88,166,255,0.3); }
-    .setup-card.all-done .card-title { border-bottom-color: rgba(63,185,80,0.3); }
-
-    .setup-steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.6rem;
-    }
-
-    .setup-step {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      padding: 0.75rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: border-color 0.2s, opacity 0.2s;
-    }
-
-    .setup-step:hover { border-color: var(--blue); }
-    .setup-step.checked { opacity: 0.45; border-color: var(--green); }
-
-    .setup-check {
-      width: 18px;
-      height: 18px;
-      border: 2px solid var(--border);
-      border-radius: 3px;
-      flex-shrink: 0;
-      margin-top: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      color: var(--green);
-      transition: border-color 0.2s, background 0.2s;
-    }
-
-    .setup-step.checked .setup-check {
-      background: var(--green);
-      border-color: var(--green);
-      color: #000;
-    }
-
-    .setup-step-body { flex: 1; min-width: 0; }
-
-    .setup-step-name {
-      font-size: 0.85rem;
-      font-weight: bold;
-      color: var(--text);
-      margin-bottom: 0.2rem;
-    }
-
-    .setup-step.checked .setup-step-name { text-decoration: line-through; color: var(--muted); }
-
-    .setup-step-desc {
-      font-size: 0.72rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .setup-link {
-      display: inline-block;
-      margin-top: 0.35rem;
-      padding: 0.2rem 0.6rem;
-      border: 1px solid var(--blue);
-      border-radius: 4px;
-      color: var(--blue);
-      font-size: 0.72rem;
-      text-decoration: none;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .setup-link:hover { background: var(--blue); color: #000; }
-
-    .setup-ready {
-      margin-top: 0.75rem;
-      padding: 0.5rem 0.75rem;
-      background: rgba(63,185,80,0.08);
-      border: 1px solid rgba(63,185,80,0.3);
-      border-radius: 6px;
-      font-size: 0.8rem;
-      color: var(--green);
-      text-align: center;
-      display: none;
-    }
-
-    .setup-card.all-done .setup-ready { display: block; }
-
-    /* =============================================
-       CONFETTI CANVAS
-    ============================================= */
-    #confetti-canvas {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 998;
+    /* Responsive */
+    @media (max-width: 768px) {
+      #app-layout { flex-direction: column; }
+      #sidebar { width: 100% !important; height: auto; max-height: 50vh; }
+      #map-panel { height: 50vh; }
     }
   </style>
 </head>
-<body>
+<body class="bg-white">
 
-<header>
-  <div class="title">&gt;_ HACKATHON CLICKER 2026</div>
-  <div class="subtitle">Nido Hack '26 &nbsp;·&nbsp; Universidad del Desarrollo &nbsp;·&nbsp; April 10–11</div>
+<!-- ═══════════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════════ -->
+<header class="header-gradient text-white px-6 py-4 flex items-center justify-between shadow-md" style="z-index:1000; position:relative;">
+  <div class="flex items-center gap-3">
+    <!-- Compass SVG icon -->
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="18" cy="18" r="17" stroke="white" stroke-width="2"/>
+      <circle cx="18" cy="18" r="4" fill="white"/>
+      <polygon points="18,4 21,18 18,14 15,18" fill="white" opacity="0.9"/>
+      <polygon points="18,32 15,18 18,22 21,18" fill="white" opacity="0.5"/>
+      <polygon points="4,18 18,15 14,18 18,21" fill="white" opacity="0.5"/>
+      <polygon points="32,18 18,21 22,18 18,15" fill="white" opacity="0.9"/>
+    </svg>
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">PassionPath</h1>
+      <p class="text-xs opacity-80">Descubre proyectos de voluntariado en Santiago</p>
+    </div>
+  </div>
+  <div class="hidden md:flex items-center gap-2 text-sm opacity-90">
+    <span>🌱 Las Condes · Vitacura · Lo Barnechea · Chicureo</span>
+  </div>
 </header>
 
-<div class="stats">
-  <div class="stat">
-    <div class="stat-value" id="stat-loc">0</div>
-    <div class="stat-label">Lines of Code</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value" id="stat-ps">0.0</div>
-    <div class="stat-label">Lines / sec</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value" id="stat-mult">1×</div>
-    <div class="stat-label">Multiplier</div>
-  </div>
-</div>
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN LAYOUT
+═══════════════════════════════════════════════════════════ -->
+<div id="app-layout" class="flex" style="height: calc(100vh - 72px);">
 
-<div class="game-grid">
+  <!-- ─── SIDEBAR ─── -->
+  <aside id="sidebar" class="bg-white border-r border-gray-100 overflow-y-auto flex-shrink-0"
+         style="width: 320px; box-shadow: 2px 0 12px rgba(0,0,0,0.06);">
 
-  <!-- ── SETUP CHECKLIST ── -->
-  <div class="card setup-card full-width" id="setup-card">
-    <div class="card-title">🔧 &nbsp;Setup — do this first on every laptop</div>
-    <div class="setup-steps">
+    <div class="p-4 space-y-5">
 
-      <div class="setup-step" id="setup-vscode" onclick="toggleSetup('vscode')">
-        <div class="setup-check" id="check-vscode"></div>
-        <div class="setup-step-body">
-          <div class="setup-step-name">1. Install VS Code</div>
-          <div class="setup-step-desc">
-            Free code editor. Download the installer, run it, done.
-            <br>
-            <a class="setup-link" href="https://code.visualstudio.com" target="_blank" onclick="event.stopPropagation()">↗ code.visualstudio.com</a>
-          </div>
+      <!-- Location selector -->
+      <div>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">📍 Tu ubicación base</h2>
+        <select id="location-select"
+                class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+          <option value="las_condes">Las Condes (Centro)</option>
+          <option value="vitacura">Vitacura</option>
+          <option value="lo_barnechea">Lo Barnechea</option>
+          <option value="chicureo">Chicureo / Colina</option>
+        </select>
+      </div>
+
+      <!-- Comunas filter -->
+      <div>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">🏙️ Comunas</h2>
+        <div class="space-y-1.5">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" class="filter-check comuna-check" value="las_condes" checked> Las Condes
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" class="filter-check comuna-check" value="vitacura" checked> Vitacura
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" class="filter-check comuna-check" value="lo_barnechea" checked> Lo Barnechea
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" class="filter-check comuna-check" value="chicureo" checked> Chicureo / Colina
+          </label>
         </div>
       </div>
 
-      <div class="setup-step" id="setup-node" onclick="toggleSetup('node')">
-        <div class="setup-check" id="check-node"></div>
-        <div class="setup-step-body">
-          <div class="setup-step-name">2. Install Node.js</div>
-          <div class="setup-step-desc">
-            Click the big green <strong>LTS</strong> button. Installs npm too.
-            <br>
-            <a class="setup-link" href="https://nodejs.org" target="_blank" onclick="event.stopPropagation()">↗ nodejs.org</a>
-          </div>
+      <!-- Budget filter -->
+      <div>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">💰 Presupuesto (CLP)</h2>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button class="budget-btn active border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-medium text-gray-600"
+                  data-budget="free">Gratis ($0)</button>
+          <button class="budget-btn border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-medium text-gray-600"
+                  data-budget="low">Bajo (&lt;$20k)</button>
+          <button class="budget-btn border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-medium text-gray-600"
+                  data-budget="medium">Medio ($20k–$100k)</button>
+          <button class="budget-btn border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-medium text-gray-600"
+                  data-budget="high">Alto ($100k+)</button>
         </div>
       </div>
 
-      <div class="setup-step" id="setup-github" onclick="toggleSetup('github')">
-        <div class="setup-check" id="check-github"></div>
-        <div class="setup-step-body">
-          <div class="setup-step-name">3. Install GitHub Desktop</div>
-          <div class="setup-step-desc">
-            How you save and share your code with your team. Download, install, sign in.
-            <br>
-            <a class="setup-link" href="https://desktop.github.com" target="_blank" onclick="event.stopPropagation()">↗ desktop.github.com</a>
-          </div>
+      <!-- Category filter -->
+      <div>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">🎯 Categorías de interés</h2>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="nature">🌿 Naturaleza</span>
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="health">❤️ Salud</span>
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="animals">🐾 Animales</span>
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="elderly">👴 Adultos Mayores</span>
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="inclusion">♿ Inclusión</span>
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="arts">🎨 Artes</span>
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="education">📚 Educación</span>
+          <span class="cat-pill active border border-gray-200 rounded-full px-3 py-1 text-xs font-medium text-gray-600" data-cat="social">🤝 Social</span>
         </div>
       </div>
 
-      <div class="setup-step" id="setup-cline" onclick="toggleSetup('cline')">
-        <div class="setup-check" id="check-cline"></div>
-        <div class="setup-step-body">
-          <div class="setup-step-name">4. Install Cline (AI helper)</div>
-          <div class="setup-step-desc">
-            Open VS Code → click the <strong>Extensions</strong> icon (4 squares, left sidebar) → search <strong>Cline</strong> → Install.
-          </div>
-        </div>
+      <!-- Divider -->
+      <hr class="border-gray-100" />
+
+      <!-- Results count -->
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Proyectos encontrados</h2>
+        <span id="result-count" class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">12</span>
+      </div>
+
+      <!-- Project cards -->
+      <div id="cards-container" class="space-y-3 pb-4">
+        <!-- Cards injected by JS -->
       </div>
 
     </div>
-    <div class="setup-ready">✅ &nbsp;You're all set up — scroll down and start the quests!</div>
-  </div>
+  </aside>
 
-  <!-- ── WRITE CODE ── -->
-  <div class="card">
-    <div class="card-title">⌨️ &nbsp;Write Code</div>
-    <div class="click-zone">
-      <button class="code-btn" id="code-btn">
-        &gt;&nbsp;run&nbsp;app.js<span class="cursor">_</span>
-      </button>
-      <div class="click-info" id="click-info">+1 line per click</div>
+  <!-- ─── MAP PANEL ─── -->
+  <div id="map-panel" class="flex-1 relative">
+    <div id="map" style="width:100%; height:100%;"></div>
+
+    <!-- Legend overlay -->
+    <div class="absolute bottom-6 right-4 bg-white rounded-2xl shadow-lg p-3 text-xs space-y-1.5"
+         style="min-width:200px; z-index:1000;">
+      <div class="font-bold text-gray-600 mb-1">🗺️ Radio de alcance</div>
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-3 h-3 rounded-full flex-shrink-0" style="background:#5CB85C;"></span>
+        <span class="text-gray-600">1.6 km — Caminando (20 min)</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-3 h-3 rounded-full flex-shrink-0" style="background:#4A90D9;"></span>
+        <span class="text-gray-600">6.5 km — Bicicleta (20 min)</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-3 h-3 rounded-full flex-shrink-0" style="background:#F0A500;"></span>
+        <span class="text-gray-600">13 km — Auto (Urbano)</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-3 h-3 rounded-full flex-shrink-0" style="background:#E74C3C;"></span>
+        <span class="text-gray-600">35 km — Auto (Carretera)</span>
+      </div>
     </div>
-  </div>
 
-  <!-- ── UPGRADES ── -->
-  <div class="card">
-    <div class="card-title">🛒 &nbsp;Upgrades</div>
-    <div class="upgrade-list" id="upgrade-list"></div>
-  </div>
-
-  <!-- ── TERMINAL QUESTS ── -->
-  <div class="card">
-    <div class="card-title">💻 &nbsp;Terminal Quests</div>
-    <div class="quest-list" id="quest-list"></div>
-  </div>
-
-  <!-- ── ACHIEVEMENTS ── -->
-  <div class="card full-width">
-    <div class="card-title">🏆 &nbsp;Achievements</div>
-    <div class="achievements-grid" id="achievements-grid"></div>
-    <button class="reset-btn" id="reset-btn">⚠ reset progress</button>
+    <!-- Tip overlay -->
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 bg-white bg-opacity-90 rounded-full shadow px-4 py-1.5 text-xs text-gray-500 pointer-events-none"
+         style="z-index:1000; transform: translateX(-50%);">
+      Haz clic en un marcador para ver detalles del proyecto
+    </div>
   </div>
 
 </div>
 
-<canvas id="confetti-canvas"></canvas>
-
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
 <script>
 // ================================================================
-//  HACKATHON CLICKER 2026 — Nido Hack '26 Starter Template
-//
-//  Everything is in this one file so it's easy to read and edit.
-//  The code is split into clearly labelled sections — feel free
-//  to change anything you like!
+//  PASSIONPATH — Data & Logic
+//  Single-file vanilla JS + Leaflet + Tailwind
 // ================================================================
 
-
-// ----------------------------------------------------------------
-//  UPGRADES
-//  Add more entries here to add new upgrades to the shop.
-// ----------------------------------------------------------------
-const UPGRADES = [
-  {
-    id: 'coffee',
-    icon: '☕',
-    name: 'Coffee Machine',
-    desc: '+1 line/sec — automatic coding',
-    cost: 100,
-    effect: { locPerSec: 1 },
-  },
-  {
-    id: 'stackoverflow',
-    icon: '📚',
-    name: 'Stack Overflow',
-    desc: '+3 click power — copy-paste master',
-    cost: 250,
-    effect: { clickPower: 3 },
-  },
-  {
-    id: 'darktheme',
-    icon: '🌙',
-    name: 'Dark Theme',
-    desc: '+5 lines/sec — unlocks true hacker mode',
-    cost: 800,
-    effect: { locPerSec: 5 },
-  },
-  {
-    id: 'aiassist',
-    icon: '🤖',
-    name: 'AI Assistant',
-    desc: '+20 lines/sec — let the AI cook',
-    cost: 3000,
-    effect: { locPerSec: 20 },
-  },
-  {
-    id: 'flowstate',
-    icon: '⚡',
-    name: 'Flow State',
-    desc: '2× all output — you\'re unstoppable',
-    cost: 8000,
-    effect: { multiplier: 2 },
-  },
-];
-
-
-// ----------------------------------------------------------------
-//  TERMINAL QUESTS
-//  Quests 3 & 4 auto-detect completion so the game rewards
-//  students automatically when they run the real commands.
-// ----------------------------------------------------------------
-const QUESTS = [
-  {
-    id: 'terminal',
-    icon: '🖥️',
-    name: '1. Open the Terminal',
-    instructions: 'In VS Code press <strong>Ctrl+`</strong> (the backtick key, top-left of keyboard) or go to <strong>View → Terminal</strong>. It opens automatically in your project folder — important for the next steps! Then paste:',
-    command: 'echo "I am a hacker"',
-    extra: 'Always use this terminal, not the one built into your Mac or Windows — those won\'t be in the right folder.',
-    reward: '+100 lines &nbsp;+&nbsp; 2× click power',
-    effect: { loc: 100, clickPower: 2 },
-    autoDetect: null,
-  },
-  {
-    id: 'node',
-    icon: '🟢',
-    name: '2. Check Node.js',
-    instructions: 'In the <strong>VS Code terminal</strong> (from quest 1) type:',
-    command: 'node --version',
-    extra: 'You should see something like <span style="color:var(--green)">v20.11.0</span>. That\'s Node.js — it runs JavaScript outside the browser.',
-    reward: '+500 lines &nbsp;+&nbsp; 2 lines/sec',
-    effect: { loc: 500, locPerSec: 2 },
-    autoDetect: null,
-  },
-  {
-    id: 'install',
-    icon: '📦',
-    name: '3. Install Packages',
-    instructions: 'In the <strong>VS Code terminal</strong> — make sure you\'re in the project folder — type:',
-    command: 'npm install',
-    extra: 'This reads <span style="color:var(--blue)">package.json</span> and downloads everything your app needs. Watch them install!',
-    reward: '+1,000 lines &nbsp;+&nbsp; 3 lines/sec &nbsp;+&nbsp; 🎉 confetti',
-    effect: { loc: 1000, locPerSec: 3 },
-    // Auto-detected: postinstall script creates unlocked.json.
-    // Only attempt the fetch when served over HTTP — file:// blocks it.
-    autoDetect: async () => {
-      if (location.protocol === 'file:') return false;
-      try {
-        const r = await fetch('./unlocked.json', { cache: 'no-store' });
-        return r.ok;
-      } catch { return false; }
-    },
-  },
-  {
-    id: 'start',
-    icon: '🚀',
-    name: '4. Launch Your App',
-    instructions: 'In the <strong>VS Code terminal</strong> — make sure you\'re in the project folder — type:',
-    command: 'npm start',
-    extra: () => {
-      const encoded  = btoa(JSON.stringify(state));
-      const href     = `http://localhost:3000?state=${encoded}`;
-      const isDone   = !!state.quests.start;
-      const pulse    = isDone ? '' : 'quest-link-pulse';
-      return `This starts a local web server. Then open:<br>
-        <a class="quest-link ${pulse}" href="${href}" target="_blank">
-          http://localhost:3000
-        </a><br>
-        Your score and progress will carry over automatically.`;
-    },
-    reward: '+2,000 lines &nbsp;+&nbsp; 10× multiplier',
-    effect: { loc: 2000, multiplier: 10 },
-    // Auto-detected: game is now being served over HTTP
-    autoDetect: async () => location.protocol === 'http:' || location.protocol === 'https:',
-  },
-];
-
-
-// ----------------------------------------------------------------
-//  ACHIEVEMENTS
-//  Add a new object to unlock a new badge.
-// ----------------------------------------------------------------
-const ACHIEVEMENTS = [
-  { id: 'first_click',   icon: '🖱️',  name: 'First Click',     desc: 'Write your first line of code',         check: s => s.totalClicks >= 1 },
-  { id: 'hello_world',   icon: '👋',  name: 'Hello World!',    desc: 'Reach 10 lines',                        check: s => s.loc >= 10 },
-  { id: 'compiles',      icon: '✅',  name: 'It Compiles!',    desc: 'Reach 100 lines',                       check: s => s.loc >= 100 },
-  { id: 'first_bug',     icon: '🐛',  name: 'First Bug',       desc: 'Buy your first upgrade',                check: s => Object.keys(s.upgrades).length >= 1 },
-  { id: 'caffeinated',   icon: '☕',  name: 'Caffeinated',     desc: 'Buy the Coffee Machine',                check: s => !!s.upgrades.coffee },
-  { id: 'mvp',           icon: '🚀',  name: 'Ship It!',        desc: 'Reach 1,000 lines',                     check: s => s.loc >= 1000 },
-  { id: 'terminal_lord', icon: '⌨️',  name: 'Terminal Lord',   desc: 'Open the terminal',                     check: s => !!s.quests.terminal },
-  { id: 'hacker',        icon: '👾',  name: 'Hacker',          desc: 'Complete all terminal quests',          check: s => QUESTS.every(q => s.quests[q.id]) },
-  { id: 'nocturnal',     icon: '🦇',  name: 'Nocturnal',       desc: 'Buy the Dark Theme',                    check: s => !!s.upgrades.darktheme },
-  { id: 'speed_runner',  icon: '⚡',  name: 'Speed Runner',    desc: 'Reach 10 lines/sec passively',          check: s => s.locPerSec >= 10 },
-  { id: 'ai_friend',     icon: '🤖',  name: 'AI Friend',       desc: 'Buy the AI Assistant',                  check: s => !!s.upgrades.aiassist },
-  { id: 'legend',        icon: '🏆',  name: 'Legend',          desc: 'Reach 10,000 lines',                    check: s => s.loc >= 10000 },
-];
-
-
-// ----------------------------------------------------------------
-//  GAME STATE
-//  All game data lives here. Saved to localStorage automatically.
-// ----------------------------------------------------------------
-const SAVE_KEY = 'nido-hack-clicker-v1';
-
-let state = {
-  loc:         0,   // lines of code (the currency)
-  clickPower:  1,   // lines earned per click
-  locPerSec:   0,   // passive income per second
-  multiplier:  1,   // global multiplier applied to everything
-  totalClicks: 0,   // lifetime click count
-  upgrades:    {},  // { upgradeId: true }
-  quests:      {},  // { questId: true }
-  achievements:{},  // { achievementId: true }
+// ── BASE LOCATIONS ──────────────────────────────────────────────
+const BASE_LOCATIONS = {
+  las_condes:   { lat: -33.4100, lng: -70.5800, label: 'Las Condes' },
+  vitacura:     { lat: -33.3950, lng: -70.5950, label: 'Vitacura' },
+  lo_barnechea: { lat: -33.3500, lng: -70.5200, label: 'Lo Barnechea' },
+  chicureo:     { lat: -33.2700, lng: -70.6500, label: 'Chicureo / Colina' },
 };
 
+// ── PROJECT DATABASE ─────────────────────────────────────────────
+const PROJECTS = [
+  // ── Las Condes ──
+  {
+    id: 1,
+    title: 'ONG Psicológicos',
+    org: 'ONG Psicológicos',
+    comuna: 'las_condes',
+    lat: -33.4150, lng: -70.5750,
+    categories: ['health'],
+    budget: 'free',
+    description: 'Apoyo en salud mental comunitaria para jóvenes y familias vulnerables.',
+    color: '#E74C3C',
+  },
+  {
+    id: 2,
+    title: 'Fundación Complementa',
+    org: 'Fundación Complementa',
+    comuna: 'las_condes',
+    lat: -33.4080, lng: -70.5820,
+    categories: ['inclusion', 'education'],
+    budget: 'free',
+    description: 'Inclusión laboral y educativa para personas con síndrome de Down.',
+    color: '#9B59B6',
+  },
+  {
+    id: 3,
+    title: 'Voluntariado Adultos Mayores',
+    org: 'Municipalidad de Las Condes',
+    comuna: 'las_condes',
+    lat: -33.4120, lng: -70.5900,
+    categories: ['elderly', 'social'],
+    budget: 'free',
+    description: 'Acompañamiento y actividades recreativas para adultos mayores de la comuna.',
+    color: '#F39C12',
+  },
 
-// ----------------------------------------------------------------
-//  SAVE / LOAD / RESET
-// ----------------------------------------------------------------
-function saveGame() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
-  catch(e) { console.warn('Save failed:', e); }
+  // ── Vitacura ──
+  {
+    id: 4,
+    title: 'Fundación Cosmos',
+    org: 'Fundación Cosmos',
+    comuna: 'vitacura',
+    lat: -33.3900, lng: -70.5980,
+    categories: ['nature'],
+    budget: 'low',
+    description: 'Proyectos de conservación ambiental y educación ecológica en Santiago.',
+    color: '#27AE60',
+  },
+  {
+    id: 5,
+    title: 'Corporación Cultural de Vitacura',
+    org: 'Corporación Cultural de Vitacura',
+    comuna: 'vitacura',
+    lat: -33.3970, lng: -70.5920,
+    categories: ['arts', 'education'],
+    budget: 'low',
+    description: 'Talleres de arte, música y teatro para niños y jóvenes de la región.',
+    color: '#E91E63',
+  },
+  {
+    id: 6,
+    title: 'Fundación Las Rosas',
+    org: 'Fundación Las Rosas',
+    comuna: 'vitacura',
+    lat: -33.3930, lng: -70.6010,
+    categories: ['elderly'],
+    budget: 'free',
+    description: 'Cuidado integral y compañía para adultos mayores en situación de vulnerabilidad.',
+    color: '#FF7043',
+  },
+
+  // ── Chicureo / Colina ──
+  {
+    id: 7,
+    title: 'Fundación Cristo Vive',
+    org: 'Fundación Cristo Vive',
+    comuna: 'chicureo',
+    lat: -33.2750, lng: -70.6480,
+    categories: ['social', 'health'],
+    budget: 'free',
+    description: 'Atención social y de salud para familias en situación de pobreza.',
+    color: '#3498DB',
+  },
+  {
+    id: 8,
+    title: 'TECHO Chile',
+    org: 'TECHO',
+    comuna: 'chicureo',
+    lat: -33.2680, lng: -70.6520,
+    categories: ['social', 'inclusion'],
+    budget: 'low',
+    description: 'Construcción de viviendas de emergencia y desarrollo comunitario.',
+    color: '#E67E22',
+  },
+  {
+    id: 9,
+    title: 'Fundación Integra',
+    org: 'Fundación Integra',
+    comuna: 'chicureo',
+    lat: -33.2720, lng: -70.6550,
+    categories: ['education'],
+    budget: 'free',
+    description: 'Educación inicial de calidad para niños y niñas en situación de vulnerabilidad.',
+    color: '#1ABC9C',
+  },
+
+  // ── Lo Barnechea ──
+  {
+    id: 10,
+    title: 'Fundación Yerba Loca',
+    org: 'Fundación Yerba Loca',
+    comuna: 'lo_barnechea',
+    lat: -33.3480, lng: -70.5180,
+    categories: ['nature'],
+    budget: 'low',
+    description: 'Conservación del ecosistema andino y trekking educativo en la precordillera.',
+    color: '#2ECC71',
+  },
+  {
+    id: 11,
+    title: 'Fundación Barnechea',
+    org: 'Fundación Barnechea',
+    comuna: 'lo_barnechea',
+    lat: -33.3520, lng: -70.5220,
+    categories: ['education', 'social'],
+    budget: 'free',
+    description: 'Mentoría y apoyo escolar para estudiantes de Lo Barnechea.',
+    color: '#5C6BC0',
+  },
+  {
+    id: 12,
+    title: 'Fundación San Rafael',
+    org: 'Fundación San Rafael',
+    comuna: 'lo_barnechea',
+    lat: -33.3550, lng: -70.5250,
+    categories: ['social', 'health'],
+    budget: 'free',
+    description: 'Atención comunitaria integral para familias de escasos recursos en Lo Barnechea.',
+    color: '#EC407A',
+  },
+];
+
+// ── CATEGORY LABELS ──────────────────────────────────────────────
+const CAT_LABELS = {
+  nature:    '🌿 Naturaleza',
+  health:    '❤️ Salud',
+  animals:   '🐾 Animales',
+  elderly:   '👴 Adultos Mayores',
+  inclusion: '♿ Inclusión',
+  arts:      '🎨 Artes',
+  education: '📚 Educación',
+  social:    '🤝 Social',
+};
+
+// ── TRANSPORT RADII (meters) ─────────────────────────────────────
+const RADII = [
+  { meters: 1600,  label: 'Caminando (20 min)', badge: 'badge-walk',    icon: '🚶', color: '#5CB85C' },
+  { meters: 6500,  label: 'Bicicleta (20 min)', badge: 'badge-cycle',   icon: '🚲', color: '#4A90D9' },
+  { meters: 13000, label: 'Auto (Urbano)',       badge: 'badge-drive',   icon: '🚗', color: '#F0A500' },
+  { meters: 35000, label: 'Auto (Carretera)',    badge: 'badge-highway', icon: '🛣️', color: '#E74C3C' },
+];
+
+// ── BUDGET ORDER ─────────────────────────────────────────────────
+const BUDGET_ORDER = { free: 0, low: 1, medium: 2, high: 3 };
+
+// ── APP STATE ────────────────────────────────────────────────────
+const state = {
+  location:   'las_condes',
+  comunas:    ['las_condes', 'vitacura', 'lo_barnechea', 'chicureo'],
+  budget:     'free',
+  categories: ['nature','health','animals','elderly','inclusion','arts','education','social'],
+};
+
+// ── MAP SETUP ────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([-33.3900, -70.5700], 12);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 18,
+}).addTo(map);
+
+const circlesGroup = L.layerGroup().addTo(map);
+const markersGroup = L.layerGroup().addTo(map);
+
+// ── HAVERSINE DISTANCE (meters) ──────────────────────────────────
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+            Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function loadGame() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) state = { ...state, ...JSON.parse(raw) };
-  } catch(e) { console.warn('Load failed:', e); }
-}
-
-function resetGame() {
-  if (!confirm('Wipe ALL progress and start over?')) return;
-  localStorage.removeItem(SAVE_KEY);
-  localStorage.removeItem(SETUP_KEY);
-  state = { loc:0, clickPower:1, locPerSec:0, multiplier:1, totalClicks:0, upgrades:{}, quests:{}, achievements:{} };
-  renderAll();
-  renderSetup({});
-  showToast('🔄 Reset! Start fresh.');
-}
-
-
-// ----------------------------------------------------------------
-//  CORE ACTIONS
-// ----------------------------------------------------------------
-function addLOC(amount, fromClick = false, clientX = 0, clientY = 0) {
-  const earned = Math.max(1, Math.floor(amount * state.multiplier));
-  state.loc += earned;
-  if (fromClick) {
-    state.totalClicks++;
-    spawnFloat(`+${earned}`, clientX, clientY);
+// ── GET TRANSPORT BADGE FOR A PROJECT ────────────────────────────
+function getTransportBadge(project) {
+  const base = BASE_LOCATIONS[state.location];
+  const dist = haversineDistance(base.lat, base.lng, project.lat, project.lng);
+  for (const r of RADII) {
+    if (dist <= r.meters) return r;
   }
-  updateStats();
-  checkAchievements();
+  return { label: 'Fuera de rango', badge: 'badge-highway', icon: '📍', color: '#999' };
 }
 
-function buyUpgrade(id) {
-  const u = UPGRADES.find(u => u.id === id);
-  if (!u || state.upgrades[id]) return;
-  if (state.loc < u.cost) { showToast(`Need ${fmt(u.cost)} lines first!`); return; }
-
-  state.loc -= u.cost;
-  state.upgrades[id] = true;
-  if (u.effect.locPerSec)   state.locPerSec   += u.effect.locPerSec;
-  if (u.effect.clickPower)  state.clickPower  += u.effect.clickPower;
-  if (u.effect.multiplier)  state.multiplier  *= u.effect.multiplier;
-
-  showToast(`🎉 ${u.name} unlocked!`);
-  if (id === 'flowstate') launchConfetti();
-  renderUpgrades();
-  updateStats();
-  saveGame();
-  checkAchievements();
+// ── COMPUTE MATCH SCORE (0–100) ──────────────────────────────────
+function computeMatchScore(project) {
+  const selectedCats = state.categories;
+  if (selectedCats.length === 0) return 0;
+  const matches = project.categories.filter(c => selectedCats.includes(c)).length;
+  const totalCats = project.categories.length;
+  let score = (matches / Math.max(totalCats, 1)) * 70;
+  const projBudget = BUDGET_ORDER[project.budget] ?? 0;
+  const userBudget = BUDGET_ORDER[state.budget] ?? 0;
+  if (projBudget <= userBudget) {
+    score += 30;
+  } else {
+    score += Math.max(0, 30 - (projBudget - userBudget) * 10);
+  }
+  return Math.round(score);
 }
 
-function completeQuest(id) {
-  const q = QUESTS.find(q => q.id === id);
-  if (!q || state.quests[id]) return;
-
-  state.quests[id] = true;
-  const e = q.effect;
-  if (e.loc)        state.loc        += e.loc;
-  if (e.locPerSec)  state.locPerSec  += e.locPerSec;
-  if (e.clickPower) state.clickPower += e.clickPower;
-  if (e.multiplier) state.multiplier *= e.multiplier;
-
-  launchConfetti();
-  showToast(`✅ Quest done: ${q.name}!<br><span style="color:var(--yellow)">${q.reward}</span>`);
-  renderQuests();
-  updateStats();
-  saveGame();
-  checkAchievements();
+// ── IS PROJECT VISIBLE GIVEN CURRENT FILTERS ─────────────────────
+function isProjectVisible(project) {
+  if (!state.comunas.includes(project.comuna)) return false;
+  const catMatch = project.categories.some(c => state.categories.includes(c));
+  if (!catMatch) return false;
+  return true;
 }
 
-function checkAchievements() {
-  let changed = false;
-  ACHIEVEMENTS.forEach(a => {
-    if (!state.achievements[a.id] && a.check(state)) {
-      state.achievements[a.id] = true;
-      showToast(`🏆 Achievement unlocked!<br><strong>${a.icon} ${a.name}</strong>`);
-      changed = true;
-    }
+// ── DRAW RADIUS CIRCLES ──────────────────────────────────────────
+function drawCircles() {
+  circlesGroup.clearLayers();
+  const base = BASE_LOCATIONS[state.location];
+
+  // Draw largest first so smaller ones appear on top
+  [...RADII].reverse().forEach((r, i) => {
+    L.circle([base.lat, base.lng], {
+      radius: r.meters,
+      color: r.color,
+      fillColor: r.color,
+      fillOpacity: 0.04,
+      weight: 2,
+      dashArray: '6,5',
+    }).addTo(circlesGroup);
   });
-  if (changed) { renderAchievements(); saveGame(); }
+
+  // Home pin
+  const homeIcon = L.divIcon({
+    html: `<div style="
+      background:#4A90D9;
+      width:20px;height:20px;
+      border-radius:50%;
+      border:3px solid white;
+      box-shadow:0 2px 8px rgba(0,0,0,0.35);
+    "></div>`,
+    className: '',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+  });
+  L.marker([base.lat, base.lng], { icon: homeIcon })
+    .bindPopup(`<b>📍 Tu ubicación</b><br>${BASE_LOCATIONS[state.location].label}`)
+    .addTo(circlesGroup);
 }
 
-async function autoDetectQuests() {
-  for (const q of QUESTS) {
-    if (q.autoDetect && !state.quests[q.id]) {
-      const detected = await q.autoDetect();
-      if (detected) completeQuest(q.id);
-    }
-  }
-}
+// ── DRAW PROJECT MARKERS ─────────────────────────────────────────
+function drawMarkers(visibleProjects) {
+  markersGroup.clearLayers();
+  visibleProjects.forEach(p => {
+    const transport = getTransportBadge(p);
+    const score = computeMatchScore(p);
+    const catLabels = p.categories.map(c => CAT_LABELS[c] || c).join(', ');
 
-// Poll every 2 seconds so detection fires even if the student
-// runs npm install / npm start after the page was already open.
-setInterval(autoDetectQuests, 2000);
-
-
-// ----------------------------------------------------------------
-//  RENDERING
-// ----------------------------------------------------------------
-function fmt(n) {
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return Math.floor(n).toLocaleString();
-}
-
-function updateStats() {
-  document.getElementById('stat-loc').textContent  = fmt(state.loc);
-  document.getElementById('stat-ps').textContent   = (state.locPerSec * state.multiplier).toFixed(1);
-  document.getElementById('stat-mult').textContent = state.multiplier.toFixed(0) + '×';
-  document.getElementById('click-info').textContent =
-    `+${Math.max(1, Math.floor(state.clickPower * state.multiplier))} line${state.clickPower * state.multiplier !== 1 ? 's' : ''} per click`;
-}
-
-function renderUpgrades() {
-  document.getElementById('upgrade-list').innerHTML = UPGRADES.map(u => {
-    const owned     = !!state.upgrades[u.id];
-    const canAfford = state.loc >= u.cost;
-    const cls       = owned ? 'owned' : (!canAfford ? 'locked' : '');
-    const costLabel = owned
-      ? `<span class="upgrade-cost owned-label">✅ owned</span>`
-      : `<span class="upgrade-cost">${fmt(u.cost)} loc</span>`;
-    return `
-      <div class="upgrade-item ${cls}" onclick="buyUpgrade('${u.id}')">
-        <div class="upgrade-icon">${u.icon}</div>
-        <div class="upgrade-info">
-          <div class="upgrade-name">${u.name}</div>
-          <div class="upgrade-desc">${u.desc}</div>
-        </div>
-        ${costLabel}
-      </div>`;
-  }).join('');
-}
-
-function renderQuests() {
-  document.getElementById('quest-list').innerHTML = QUESTS.map(q => {
-    const done         = !!state.quests[q.id];
-    const isAutoDetect = !!q.autoDetect;
-
-    return `
-      <div class="quest-item ${done ? 'done' : ''}">
-
-        <div class="quest-header">
-          <span class="quest-name">${q.icon} ${q.name}</span>
-          <span class="quest-status">${done ? '✅ done' : '🔒'}</span>
-        </div>
-
-        ${done ? '<div class="quest-completed-badge">COMPLETED</div>' : ''}
-
-        <div class="quest-body ${done ? 'quest-body-done' : ''}">
-          ${q.instructions}<br>
-          <code class="code-snippet">${q.command}</code>
-          ${q.extra ? `<br><br>${typeof q.extra === 'function' ? q.extra() : q.extra}` : ''}
-        </div>
-
-        ${!done
-          ? isAutoDetect
-            ? `<div class="quest-waiting">
-                 <span class="pulse-dot"></span>
-                 Waiting — run the command above to unlock automatically…
-               </div>`
-            : `<button class="quest-btn" onclick="completeQuest('${q.id}')">✓ I DID IT — UNLOCK</button>`
-          : ''
-        }
-
-        <div class="quest-reward">${q.reward}</div>
-
-      </div>`;
-  }).join('');
-}
-
-function renderAchievements() {
-  document.getElementById('achievements-grid').innerHTML = ACHIEVEMENTS.map(a => `
-    <div class="achievement ${state.achievements[a.id] ? 'unlocked' : ''}" title="${a.name}: ${a.desc}">
-      <div class="achievement-icon">${a.icon}</div>
-      <div class="achievement-name">${a.name}</div>
-    </div>`
-  ).join('');
-}
-
-function renderAll() {
-  updateStats();
-  renderUpgrades();
-  renderQuests();
-  renderAchievements();
-}
-
-
-// ----------------------------------------------------------------
-//  FLOATING +N EFFECT
-// ----------------------------------------------------------------
-function spawnFloat(text, x, y) {
-  const el = document.createElement('div');
-  el.className = 'float-text';
-  el.textContent = text;
-  el.style.color  = state.multiplier >= 10 ? 'var(--pink)' : state.multiplier >= 2 ? 'var(--orange)' : 'var(--green)';
-  el.style.left   = (x - 16) + 'px';
-  el.style.top    = (y - 16) + 'px';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 950);
-}
-
-
-// ----------------------------------------------------------------
-//  CONFETTI
-//  Built-in canvas confetti — no CDN needed.
-//  Feel free to replace with canvas-confetti from npm after install!
-// ----------------------------------------------------------------
-const cCanvas = document.getElementById('confetti-canvas');
-const cCtx    = cCanvas.getContext('2d');
-let   cParts  = [];
-
-function launchConfetti() {
-  cCanvas.width  = window.innerWidth;
-  cCanvas.height = window.innerHeight;
-  const colors = ['#3fb950','#58a6ff','#f778ba','#e3b341','#ffa657','#ffffff'];
-  for (let i = 0; i < 120; i++) {
-    cParts.push({
-      x:    Math.random() * cCanvas.width,
-      y:    Math.random() * cCanvas.height * 0.5 - cCanvas.height * 0.2,
-      w:    Math.random() * 10 + 4,
-      h:    Math.random() * 5 + 2,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      rot:  Math.random() * Math.PI * 2,
-      rotV: (Math.random() - 0.5) * 0.15,
-      vy:   Math.random() * 3.5 + 1.5,
-      vx:   (Math.random() - 0.5) * 1.5,
+    const markerIcon = L.divIcon({
+      html: `<div style="
+        background:${p.color};
+        width:30px;height:30px;
+        border-radius:50% 50% 50% 0;
+        transform:rotate(-45deg);
+        border:2.5px solid white;
+        box-shadow:0 3px 10px rgba(0,0,0,0.28);
+      "></div>`,
+      className: '',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
     });
-  }
-  if (cParts.length > 0) requestAnimationFrame(tickConfetti);
-}
 
-function tickConfetti() {
-  cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
-  cParts = cParts.filter(p => p.y < cCanvas.height + 20);
-  cParts.forEach(p => {
-    p.y   += p.vy;
-    p.x   += p.vx;
-    p.rot += p.rotV;
-    cCtx.save();
-    cCtx.translate(p.x, p.y);
-    cCtx.rotate(p.rot);
-    cCtx.fillStyle = p.color;
-    cCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-    cCtx.restore();
+    const popup = `
+      <div style="font-family:'Segoe UI',sans-serif;min-width:210px;padding:2px;">
+        <div style="font-weight:700;font-size:14px;color:#1a1a2e;margin-bottom:3px;">${p.title}</div>
+        <div style="font-size:12px;color:#666;margin-bottom:6px;">${p.org}</div>
+        <div style="font-size:11px;color:#888;margin-bottom:8px;line-height:1.5;">${p.description}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="background:#e8f4fb;color:#4A90D9;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;">
+            ⭐ ${score}% match
+          </span>
+          <span style="background:#f0faf0;color:#5CB85C;border-radius:20px;padding:2px 9px;font-size:11px;">
+            ${transport.icon} ${transport.label}
+          </span>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:#aaa;">${catLabels}</div>
+      </div>
+    `;
+
+    L.marker([p.lat, p.lng], { icon: markerIcon })
+      .bindPopup(popup)
+      .addTo(markersGroup);
   });
-  if (cParts.length > 0) requestAnimationFrame(tickConfetti);
-  else cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
 }
 
+// ── RENDER PROJECT CARDS ─────────────────────────────────────────
+function renderCards(visibleProjects) {
+  const container = document.getElementById('cards-container');
+  const countEl   = document.getElementById('result-count');
 
-// ----------------------------------------------------------------
-//  TOAST NOTIFICATION
-// ----------------------------------------------------------------
-function showToast(html) {
-  document.querySelectorAll('.toast').forEach(t => t.remove());
-  const t = document.createElement('div');
-  t.className   = 'toast';
-  t.innerHTML   = html;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3200);
+  const sorted = [...visibleProjects].sort((a, b) => computeMatchScore(b) - computeMatchScore(a));
+  countEl.textContent = sorted.length;
+
+  if (sorted.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:2rem 1rem;color:#9ca3af;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🔍</div>
+        <div style="font-size:0.85rem;">No hay proyectos con estos filtros.<br>Prueba seleccionando más categorías.</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = sorted.map(p => {
+    const score     = computeMatchScore(p);
+    const transport = getTransportBadge(p);
+    const catLabels = p.categories.map(c => CAT_LABELS[c] || c).join(' · ');
+    const barColor  = score >= 70 ? '#5CB85C' : score >= 40 ? '#4A90D9' : '#F0A500';
+    const catEmojis = p.categories.map(c => (CAT_LABELS[c] || '').split(' ')[0]).join('');
+
+    return `
+      <div class="project-card bg-white border border-gray-100 rounded-2xl p-4 cursor-pointer"
+           style="box-shadow:0 2px 12px rgba(0,0,0,0.06);"
+           onclick="flyToProject(${p.id})">
+
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+          <div>
+            <div style="font-weight:600;font-size:14px;color:#1f2937;line-height:1.3;">${p.title}</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px;">${p.org}</div>
+          </div>
+          <span style="flex-shrink:0;background:${p.color}22;color:${p.color};border-radius:20px;padding:2px 8px;font-size:12px;font-weight:600;">
+            ${catEmojis}
+          </span>
+        </div>
+
+        <p style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">${p.description}</p>
+
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-size:11px;color:#9ca3af;">Match</span>
+            <span style="font-size:12px;font-weight:700;color:${barColor};">${score}%</span>
+          </div>
+          <div style="width:100%;background:#f3f4f6;border-radius:999px;height:6px;">
+            <div class="match-bar-fill" style="width:${score}%;background:${barColor};height:6px;border-radius:999px;"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          <span class="${transport.badge}" style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;">
+            ${transport.icon} ${transport.label}
+          </span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#6b7280;">
+            ${catLabels}
+          </span>
+        </div>
+
+      </div>`;
+  }).join('');
 }
 
+// ── FLY TO PROJECT ON MAP ────────────────────────────────────────
+function flyToProject(id) {
+  const p = PROJECTS.find(x => x.id === id);
+  if (!p) return;
+  map.flyTo([p.lat, p.lng], 15, { duration: 0.8 });
+}
 
-// ----------------------------------------------------------------
-//  CLICK HANDLER
-// ----------------------------------------------------------------
-document.getElementById('code-btn').addEventListener('click', e => {
-  addLOC(state.clickPower, true, e.clientX, e.clientY);
-  renderUpgrades(); // refresh affordability colours
+// ── MAIN RENDER ──────────────────────────────────────────────────
+function renderAll() {
+  const visible = PROJECTS.filter(isProjectVisible);
+  drawCircles();
+  drawMarkers(visible);
+  renderCards(visible);
+}
+
+// ── EVENT LISTENERS ──────────────────────────────────────────────
+
+// Location select
+document.getElementById('location-select').addEventListener('change', function() {
+  state.location = this.value;
+  map.flyTo([BASE_LOCATIONS[this.value].lat, BASE_LOCATIONS[this.value].lng], 12, { duration: 0.8 });
+  renderAll();
 });
 
-
-// ----------------------------------------------------------------
-//  PASSIVE INCOME LOOP  (runs 20× per second)
-// ----------------------------------------------------------------
-setInterval(() => {
-  if (state.locPerSec > 0) {
-    state.loc += (state.locPerSec * state.multiplier) / 20;
-    updateStats();
-  }
-  // Autosave roughly every 5 seconds
-  if (Math.random() < 0.01) saveGame();
-}, 50);
-
-
-// ----------------------------------------------------------------
-//  RESET BUTTON
-// ----------------------------------------------------------------
-document.getElementById('reset-btn').addEventListener('click', resetGame);
-
-
-// ----------------------------------------------------------------
-//  SETUP CHECKLIST
-//  Tracks which install steps the student has ticked.
-//  State is stored separately from the game save so a reset
-//  doesn't make them re-tick the installs.
-// ----------------------------------------------------------------
-const SETUP_KEY = 'nido-hack-setup-v1';
-const SETUP_ITEMS = ['vscode', 'node', 'github', 'cline'];
-
-function loadSetup() {
-  try { return JSON.parse(localStorage.getItem(SETUP_KEY)) || {}; }
-  catch { return {}; }
-}
-
-function saveSetup(s) {
-  try { localStorage.setItem(SETUP_KEY, JSON.stringify(s)); }
-  catch {}
-}
-
-function toggleSetup(id) {
-  const s = loadSetup();
-  s[id] = !s[id];
-  saveSetup(s);
-  renderSetup(s);
-}
-
-function renderSetup(s) {
-  SETUP_ITEMS.forEach(id => {
-    const step  = document.getElementById('setup-' + id);
-    const check = document.getElementById('check-' + id);
-    if (!step || !check) return;
-    step.classList.toggle('checked', !!s[id]);
-    check.textContent = s[id] ? '✓' : '';
+// Comuna checkboxes
+document.querySelectorAll('.comuna-check').forEach(cb => {
+  cb.addEventListener('change', function() {
+    if (this.checked) {
+      if (!state.comunas.includes(this.value)) state.comunas.push(this.value);
+    } else {
+      state.comunas = state.comunas.filter(c => c !== this.value);
+    }
+    renderAll();
   });
-  const allDone = SETUP_ITEMS.every(id => !!s[id]);
-  document.getElementById('setup-card').classList.toggle('all-done', allDone);
-}
+});
 
-renderSetup(loadSetup());
+// Budget buttons
+document.querySelectorAll('.budget-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.budget-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    state.budget = this.dataset.budget;
+    renderAll();
+  });
+});
 
+// Category pills
+document.querySelectorAll('.cat-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    const cat = this.dataset.cat;
+    if (this.classList.contains('active')) {
+      this.classList.remove('active');
+      state.categories = state.categories.filter(c => c !== cat);
+    } else {
+      this.classList.add('active');
+      if (!state.categories.includes(cat)) state.categories.push(cat);
+    }
+    renderAll();
+  });
+});
 
-// ----------------------------------------------------------------
-//  STARTUP
-// ----------------------------------------------------------------
-// Import state carried over from file:// via URL param
-(function importURLState() {
-  try {
-    const param = new URLSearchParams(location.search).get('state');
-    if (!param) return;
-    const imported = JSON.parse(atob(param));
-    state = { ...state, ...imported };
-    saveGame(); // Persist to this origin's localStorage
-    history.replaceState({}, '', location.pathname); // Clean the URL
-    console.log('Progress imported from previous session ✅');
-  } catch(e) {
-    console.warn('State import failed:', e);
-  }
-})();
-
-loadGame();
+// ── INITIAL RENDER ───────────────────────────────────────────────
 renderAll();
-autoDetectQuests();
 
-if (state.totalClicks === 0) {
-  setTimeout(() => showToast('👾 Welcome to Hackathon Clicker!<br>Click the button to write code!'), 600);
-}
 </script>
-
 </body>
 </html>
